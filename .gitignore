@@ -1,0 +1,28 @@
+# ---- 构建产物（可重建，不进版本库）----
+build/
+cmake-build-*/
+out/
+x64/
+
+# ---- IDE / 编辑器 ----
+.vs/
+.idea/
+*.user
+*.DotSettings.user
+
+# ---- 编译中间件与可执行文件 ----
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.dll
+
+# ---- 第三方作业答案（学术诚信：不收录别人的实现）----
+*.answer
+
+# ---- 系统垃圾 ----
+.DS_Store
+Thumbs.db
+desktop.ini

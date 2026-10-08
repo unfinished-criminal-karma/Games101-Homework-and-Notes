@@ -1,0 +1,40 @@
+﻿cmake_minimum_required(VERSION 3.15)
+project(Rasterizer CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ==================== 只需要改下面两处路径 ====================
+set(EIGEN_ROOT "F:/epic/UE_5.7/Engine/Source/ThirdParty/Eigen")
+set(OpenCV_DIR "G:/OpenCV/opencv/build")
+# =============================================================
+
+find_package(OpenCV REQUIRED)
+message(STATUS "OpenCV version : ${OpenCV_VERSION}")
+
+add_executable(Rasterizer
+    main.cpp
+    rasterizer.cpp
+    Triangle.cpp
+        main.cpp
+        main.cpp
+        rasterizer.hpp
+)
+
+target_include_directories(Rasterizer PRIVATE ${EIGEN_ROOT} ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(Rasterizer PRIVATE ${OpenCV_LIBS})
+
+set_target_properties(Rasterizer PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY         "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}"
+)
+
+if(WIN32)
+    add_custom_command(TARGET Rasterizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${OpenCV_DIR}/x64/vc16/bin"
+                "$<TARGET_FILE_DIR:Rasterizer>"
+        COMMENT "copy OpenCV runtime DLL"
+    )
+endif()

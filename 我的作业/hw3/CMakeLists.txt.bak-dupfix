@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.15)
+project(Rasterizer CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ==================== 只需要改下面两处路径 ====================
+# 1) Eigen：直接复用 UE 源码里自带的（纯头文件，无需安装）
+set(EIGEN_ROOT "F:/epic/UE_5.7/Engine/Source/ThirdParty/Eigen")
+
+# 2) OpenCV：解压 opencv-4.x.x-windows.exe 后得到的那个 opencv 目录，指向它的 build
+set(OpenCV_DIR "G:/OpenCV/opencv/build")
+# =============================================================
+
+find_package(OpenCV REQUIRED)
+
+message(STATUS "OpenCV 版本   : ${OpenCV_VERSION}")
+message(STATUS "OpenCV 头文件 : ${OpenCV_INCLUDE_DIRS}")
+message(STATUS "Eigen 根目录  : ${EIGEN_ROOT}")
+
+add_executable(Rasterizer
+    main.cpp
+    rasterizer.cpp
+    Triangle.cpp
+    Texture.cpp
+        main.cpp
+        main.cpp
+        main.cpp
+        rasterizer.cpp
+        rasterizer.cpp
+)
+
+target_include_directories(Rasterizer PRIVATE
+    ${EIGEN_ROOT}
+    ${OpenCV_INCLUDE_DIRS}
+)
+
+target_link_libraries(Rasterizer PRIVATE ${OpenCV_LIBS})
+
+# 让 exe 生成在 build/ 而不是 build/Release/
+# 原因：框架里用的是 "../models/spot/..." 这种相对路径，工作目录必须是 build/
+set_target_properties(Rasterizer PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY         "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}"
+)
+
+# Windows：编译完把 OpenCV 的 dll 拷到 exe 旁边，免得运行时弹「找不到 opencv_world4xx.dll」
+if(WIN32)
+    add_custom_command(TARGET Rasterizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${OpenCV_DIR}/x64/vc16/bin"
+                "$<TARGET_FILE_DIR:Rasterizer>"
+        COMMENT "拷贝 OpenCV 运行时 DLL"
+    )
+endif()

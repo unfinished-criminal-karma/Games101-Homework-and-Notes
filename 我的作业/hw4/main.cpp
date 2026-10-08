@@ -1,0 +1,155 @@
+#include <chrono>
+#include <iostream>
+#include <opencv2/opencv.hpp>
+
+std::vector<cv::Point2f> control_points;
+
+void mouse_handler(int event, int x, int y, int flags, void *userdata) 
+{
+    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 4) 
+    {
+        std::cout << "Left button of the mouse is clicked - position (" << x << ", "
+        << y << ")" << '\n';
+        control_points.emplace_back(x, y);
+    }     
+}
+
+void naive_bezier(const std::vector<cv::Point2f> &points, cv::Mat &window) 
+{
+    auto &p_0 = points[0];
+    auto &p_1 = points[1];
+    auto &p_2 = points[2];
+    auto &p_3 = points[3];
+
+    for (double t = 0.0; t <= 1.0; t += 0.001) 
+    {
+        auto point = std::pow(1 - t, 3) * p_0 + 3 * t * std::pow(1 - t, 2) * p_1 +
+                 3 * std::pow(t, 2) * (1 - t) * p_2 + std::pow(t, 3) * p_3;
+        auto point1 =cv::Point2f(point.x + 0.5,point.y + 0.5);
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
+            {
+                auto temp_point =cv::Point2f(point1.x + i,point1.y + j);
+                if (temp_point.x < 0 || temp_point.y < 0 || temp_point.x >= window.cols || temp_point.y >= window.rows) continue;
+                float deltax = point.x - temp_point.x;
+                float deltay = point.y - temp_point.y;
+                float distance2 = deltax * deltax + deltay * deltay;
+                float ColorIntensity;
+                if (distance2 < 0.5)
+                {
+                    ColorIntensity = 1;
+                }
+                else if (distance2 > 2)
+                {
+                    ColorIntensity = 0;
+                }
+                else
+                {
+                    ColorIntensity = 1.0 - distance2/2.0;
+                }
+                uchar c = (uchar)(255 * ColorIntensity);
+                auto &pixel = window.at<cv::Vec3b>(temp_point.y, temp_point.x);
+                pixel[2] = std::max(pixel[2],c);
+            }
+        }
+    }
+}
+
+cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points, float t) 
+{
+    // TODO: Implement de Casteljau's algorithm
+    if (control_points.size() == 1)return control_points[0];
+    std::vector<cv::Point2f> temp_points;
+    temp_points.reserve(control_points.size()-1);
+    for (size_t index = 0; index < control_points.size()-1; index++)
+    {
+        temp_points.push_back(control_points[index] * (1-t) + control_points[index + 1] * t);
+    }
+    return recursive_bezier(temp_points, t);
+    /*
+    auto &p00 = control_points[0];
+    auto &p01 = control_points[1];
+    auto &p02 = control_points[2];
+    auto &p03 = control_points[3];
+    auto p10 = p00 * (1-t) + p01 * t;
+    auto p11 = p01 * (1-t) + p02 * t;
+    auto p12 = p02 * (1-t) + p03 * t;
+    auto p20 = p10 * (1-t) + p11 * t;
+    auto p21 = p11 * (1-t) + p12 * t;
+    auto p30 = p20 * (1-t) + p21 * t;
+    return cv::Point2f(p30.x, p30.y);*/
+}
+
+void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window) 
+{
+    // TODO: Iterate through all t = 0 to t = 1 with small steps, and call de Casteljau's 
+    // recursive Bezier algorithm.
+    for (float t = 0.0; t <= 1.0; t += 0.001)
+    {
+        auto point = recursive_bezier(control_points, t);
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
+            {
+                auto temp_point =cv::Point2f(floor(point.x) + 0.5 + i,floor(point.y) + 0.5 + j);
+                if (temp_point.x < 0 || temp_point.y < 0 || temp_point.x >= window.cols || temp_point.y >= window.rows) continue;
+                float deltax = point.x - temp_point.x;
+                float deltay = point.y - temp_point.y;
+                float distance2 = deltax * deltax + deltay * deltay;
+                float ColorIntensity;
+                if (distance2 < 0.5)
+                {
+                    ColorIntensity = 1;
+                }
+                else if (distance2 > 2)
+                {
+                    ColorIntensity = 0;
+                }
+                else
+                {
+                    ColorIntensity = 1.0 - distance2/2.0;
+                }
+                uchar c = (uchar)(255 * ColorIntensity);
+                auto &pixel = window.at<cv::Vec3b>(temp_point.y, temp_point.x);
+                pixel[1] = std::max(pixel[1],c);
+            }
+            
+        }
+    }
+}
+
+int main() 
+{
+    cv::Mat window = cv::Mat(700, 700, CV_8UC3, cv::Scalar(0));
+    cv::cvtColor(window, window, cv::COLOR_BGR2RGB);//BGR顺序
+    cv::namedWindow("Bezier Curve", cv::WINDOW_AUTOSIZE);
+
+    cv::setMouseCallback("Bezier Curve", mouse_handler, nullptr);
+
+    int key = -1;
+    while (key != 27) 
+    {
+        for (auto &point : control_points) 
+        {
+            cv::circle(window, point, 3, {255, 255, 255}, 3);
+        }
+
+        if (control_points.size() == 4) 
+        {
+            //naive_bezier(control_points, window);
+            bezier(control_points, window);
+
+            cv::imshow("Bezier Curve", window);
+            cv::imwrite("my_bezier_curve.png", window);
+            key = cv::waitKey(0);
+
+            return 0;
+        }
+
+        cv::imshow("Bezier Curve", window);
+        key = cv::waitKey(20);
+    }
+
+return 0;
+}
